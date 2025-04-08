@@ -15,7 +15,7 @@ const __dirname = path.resolve();
 
 app.use(express.json());
 app.use(cookieParser());
-app.use(bodyParser.json({ limit: "100mb" })); // Thay '50mb' bằng giá trị bạn muốn
+app.use(bodyParser.json({ limit: "100mb" })); 
 app.use(bodyParser.urlencoded({ limit: "100mb", extended: true }));
 app.use(
   cors({
