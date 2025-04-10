@@ -24,6 +24,11 @@ const Navbar = () => {
             </Link>
           </div>
 
+          <Link to="/groups" className="btn btn-sm gap-2 transition-colors">
+            <MessageSquare className="w-4 h-4" />
+            <span className="hidden sm:inline">Groups</span>
+          </Link>
+
           <div className="flex items-center gap-2">
             <Link
               to={"/setting"}

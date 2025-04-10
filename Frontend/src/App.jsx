@@ -5,6 +5,7 @@ import LoginPage from "./pages/LoginPage.jsx";
 import ProfilePage from "./pages/ProfilePage.jsx";
 import SettingPage from "./pages/SettingPage.jsx";
 import SignUpPage from "./pages/SignUpPage.jsx";
+import GroupPage from "./pages/GroupPage.jsx";
 import { useAuthStore } from "./store/useAuthStore.js";
 import { useEffect } from "react";
 import { Loader } from "lucide-react";
@@ -51,6 +52,7 @@ const App = () => {
           path="/profile"
           element={authUser ? <ProfilePage /> : <Navigate to="/login" />}
         />
+        <Route path="/groups" element={<GroupPage />} />
       </Routes>
       <Toaster />
     </div>

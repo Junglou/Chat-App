@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import authRoute from "./routes/auth.route.js";
 import messageRoute from "./routes/message.route.js";
+import groupRoute from "./routes/group.route.js"; // ✅ THÊM DÒNG NÀY
 import { ConnectDB } from "./lib/db.js";
 import cookieParser from "cookie-parser";
 import bodyParser from "body-parser";
@@ -15,7 +16,7 @@ const __dirname = path.resolve();
 
 app.use(express.json());
 app.use(cookieParser());
-app.use(bodyParser.json({ limit: "100mb" })); // Thay '50mb' bằng giá trị bạn muốn
+app.use(bodyParser.json({ limit: "100mb" }));
 app.use(bodyParser.urlencoded({ limit: "100mb", extended: true }));
 app.use(
   cors({
@@ -23,8 +24,12 @@ app.use(
     credentials: true,
   })
 );
+
+// ROUTES
 app.use("/api/auth", authRoute);
 app.use("/api/messages", messageRoute);
+app.use("/api/groups", groupRoute); // ✅ THÊM DÒNG NÀY
+
 ConnectDB();
 
 if (process.env.NODE_ENV === "production") {
@@ -35,6 +40,6 @@ if (process.env.NODE_ENV === "production") {
   });
 }
 
-server.listen(port, (req, res) => {
-  console.log(`Server is Running in ${port}`);
+server.listen(port, () => {
+  console.log(`Server is Running on port ${port}`);
 });
