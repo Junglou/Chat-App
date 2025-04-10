@@ -1,6 +1,6 @@
 import User from "../models/user.model.js";
 import Message from "../models/message.model.js";
-import cloudinary from "cloudinary"; // Thêm import cloudinary nếu chưa có
+import cloudinary from "cloudinary";
 import { getReceiverSocketId, io } from "../lib/socket.js";
 
 export const getUsersForSideBar = async (req, res) => {
@@ -40,7 +40,7 @@ export const getMessages = async (req, res) => {
 export const sendMessages = async (req, res) => {
   try {
     const { text, image } = req.body;
-    const { id: receiverId } = req.params; // Sửa từ reciverId thành receiverId
+    const { id: receiverId } = req.params; 
     const senderId = req.user._id;
 
     let imageURL;
@@ -51,7 +51,7 @@ export const sendMessages = async (req, res) => {
 
     const newMessage = new Message({
       senderId,
-      receiverId, // Sửa từ reciverId thành receiverId
+      receiverId, 
       text,
       image: imageURL,
     });
