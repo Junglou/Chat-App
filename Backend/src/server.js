@@ -1,41 +1,45 @@
 import express from "express";
 import dotenv from "dotenv";
-import authRoute from "./routes/auth.route.js";
-import messageRoute from "./routes/message.route.js";
-import groupRoute from "./routes/group.route.js"; // ✅ THÊM DÒNG NÀY
-import { ConnectDB } from "./lib/db.js";
+import path from "path";
 import cookieParser from "cookie-parser";
 import bodyParser from "body-parser";
 import cors from "cors";
+
+import { ConnectDB } from "./lib/db.js";
 import { app, server } from "./lib/socket.js";
-import path from "path";
+
+import authRoute from "./routes/auth.route.js";
+import messageRoute from "./routes/message.route.js";
+import groupRoute from "./routes/group.route.js";
+import groupMessageRoutes from "./routes/messageGroup.route.js"; 
 
 dotenv.config();
 const port = process.env.PORT || 5000;
 const __dirname = path.resolve();
 
+// ===== Middlewares =====
 app.use(express.json());
 app.use(cookieParser());
-<<<<<<< HEAD
 app.use(bodyParser.json({ limit: "100mb" }));
-=======
-app.use(bodyParser.json({ limit: "100mb" })); 
->>>>>>> 786cd2d20a3fe5c3332222c71e1bcdf739081978
 app.use(bodyParser.urlencoded({ limit: "100mb", extended: true }));
+
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: "http://localhost:5173", 
     credentials: true,
   })
 );
 
-// ROUTES
+// ===== Routes =====
 app.use("/api/auth", authRoute);
 app.use("/api/messages", messageRoute);
-app.use("/api/groups", groupRoute); // ✅ THÊM DÒNG NÀY
+app.use("/api/groups", groupRoute); 
+app.use("/api/group-messages", groupMessageRoutes); 
 
+// ===== Connect DB =====
 ConnectDB();
 
+// ===== Serve frontend in production =====
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../Frontend/dist")));
 
@@ -44,6 +48,7 @@ if (process.env.NODE_ENV === "production") {
   });
 }
 
+// ===== Start Server =====
 server.listen(port, () => {
-  console.log(`Server is Running on port ${port}`);
+  console.log(`✅ Server is running on port ${port}`);
 });

@@ -19,18 +19,18 @@ export const getUsersForSideBar = async (req, res) => {
 
 export const getMessages = async (req, res) => {
   try {
-    const { id: userToChatId } = req.params; // ID của người nhận
-    const senderId = req.user._id; // ID của người gửi (người đang đăng nhập)
+    const { id: userToChatId } = req.params; 
+    const senderId = req.user._id;
 
-    // Lấy các tin nhắn giữa người gửi và người nhận
+    
     const messages = await Message.find({
       $or: [
-        { senderId: senderId, receiverId: userToChatId }, // Tin nhắn từ người gửi đến người nhận
-        { senderId: userToChatId, receiverId: senderId }, // Tin nhắn từ người nhận đến người gửi
+        { senderId: senderId, receiverId: userToChatId }, 
+        { senderId: userToChatId, receiverId: senderId }, 
       ],
     });
 
-    res.status(200).json(messages); // Trả về danh sách tin nhắn
+    res.status(200).json(messages);
   } catch (e) {
     console.error("Error in getMessages controller ", e.message);
     res.status(500).json({ message: "Internal Server Error!!" });

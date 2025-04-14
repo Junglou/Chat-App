@@ -1,26 +1,33 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useGroupStore } from "../store/useGroupStore";
 import { useGroupMessageStore } from "../store/useGroupMessageStore";
+import { useAuthStore } from "../store/useAuthStore";
+
+const formatMessageTime = (timestamp) => {
+  const date = new Date(timestamp);
+  return `${date.getHours()}:${String(date.getMinutes()).padStart(2, "0")}`;
+};
 
 const GroupChatContainer = () => {
   const { selectedGroup } = useGroupStore();
+  const { authUser } = useAuthStore();
   const { messages, fetchMessages, sendMessage } = useGroupMessageStore();
   const [input, setInput] = useState("");
   const messagesEndRef = useRef(null);
 
-  const currentUser = JSON.parse(localStorage.getItem("chat-user"));
+  const groupMessages = messages?.[selectedGroup?._id] || [];
 
-  // Fetch messages when the group changes
+  // Fetch messages when a new group is selected
   useEffect(() => {
     if (selectedGroup?._id) {
       fetchMessages(selectedGroup._id);
     }
   }, [selectedGroup, fetchMessages]);
 
-  // Auto-scroll to the bottom when new messages arrive
+  // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, selectedGroup]);
+  }, [groupMessages]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -39,42 +46,55 @@ const GroupChatContainer = () => {
     );
   }
 
-  const groupMessages = messages?.[selectedGroup._id] || [];
-
   return (
-    <div className="flex-1 p-4 flex flex-col">
+    <div className="flex-1 flex flex-col overflow-auto p-4">
       {/* Group Header */}
-      <div className="border-b pb-2 mb-2">
-        <h2 className="text-xl font-semibold">{selectedGroup.name}</h2>
+      <div className="border-b pb-2 mb-4">
+        <h2 className="text-xl font-bold">{selectedGroup.name}</h2>
         <p className="text-sm text-zinc-500">
           Members: {selectedGroup.members?.length || 0}
         </p>
       </div>
 
-      {/* Message List */}
-      <div className="flex-1 overflow-y-auto border rounded p-4 bg-base-200 space-y-2 flex flex-col">
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto space-y-4 mb-4">
         {groupMessages.length === 0 ? (
           <p className="text-sm text-zinc-500 italic">No messages yet...</p>
         ) : (
           groupMessages.map((msg) => {
-            const isOwn = msg?.sender?._id === currentUser?._id;
-            const senderName = msg?.sender?.name || "Anonymous"; // Fallback for missing sender name
+            const isOwn = msg?.sender?._id === authUser?._id;
+            const messageKey = msg._id || `${msg.text}-${msg.createdAt}`;
+            const senderName = isOwn ? "You" : msg?.sender?.name || "Anonymous";
 
             return (
               <div
-                key={msg._id}
-                className={`p-2 rounded shadow text-sm max-w-xs ${
-                  isOwn
-                    ? "bg-blue-200 self-end text-right"
-                    : "bg-white self-start"
-                }`}
+                key={messageKey}
+                className={`chat ${isOwn ? "chat-end" : "chat-start"}`}
               >
-                {!isOwn && (
-                  <div className="font-medium text-sm text-zinc-600 mb-1">
-                    {senderName}
+                <div className="chat-image avatar">
+                  <div className="size-10 rounded-full border">
+                    <img
+                      src={msg?.sender?.avatar || "/avatar.png"}
+                      alt={senderName}
+                    />
                   </div>
-                )}
-                <div>{msg?.text || "[No message]"}</div>
+                </div>
+                <div className="chat-header mb-1">
+                  <span className="text-sm font-medium">{senderName}</span>
+                  <time className="text-xs opacity-50 ml-2">
+                    {formatMessageTime(msg?.createdAt)}
+                  </time>
+                </div>
+                <div className="chat-bubble">
+                  {msg?.image && (
+                    <img
+                      src={msg.image}
+                      alt="Attachment"
+                      className="sm:max-w-[200px] rounded mb-2"
+                    />
+                  )}
+                  {msg?.text && <p>{msg.text}</p>}
+                </div>
               </div>
             );
           })
@@ -82,12 +102,12 @@ const GroupChatContainer = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input and Send Message */}
-      <form onSubmit={handleSendMessage} className="mt-2 flex gap-2">
+      {/* Input */}
+      <form onSubmit={handleSendMessage} className="flex gap-2">
         <input
           type="text"
-          placeholder="Type a message..."
           className="input input-bordered flex-1"
+          placeholder="Type a message..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
         />
