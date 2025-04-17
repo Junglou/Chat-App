@@ -3,30 +3,38 @@ import { useGroupStore } from "../store/useGroupStore";
 import { useGroupMessageStore } from "../store/useGroupMessageStore";
 import { useAuthStore } from "../store/useAuthStore";
 
-const formatMessageTime = (timestamp) => {
-  const date = new Date(timestamp);
-  return `${date.getHours()}:${String(date.getMinutes()).padStart(2, "0")}`;
+const formatMessageTime = (dateStr) => {
+  if (!dateStr) return "--:--";
+  const date = new Date(dateStr);
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  return `${hours.toString().padStart(2, "0")}:${minutes
+    .toString()
+    .padStart(2, "0")}`;
 };
 
 const GroupChatContainer = () => {
   const { selectedGroup } = useGroupStore();
   const { authUser } = useAuthStore();
   const { messages, fetchMessages, sendMessage } = useGroupMessageStore();
+
   const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
   const groupMessages = messages?.[selectedGroup?._id] || [];
 
-  // Fetch messages when a new group is selected
+  // Fetch messages
   useEffect(() => {
-    if (selectedGroup?._id) {
-      fetchMessages(selectedGroup._id);
-    }
-  }, [selectedGroup, fetchMessages]);
+    if (!selectedGroup?._id) return;
 
-  // Scroll to bottom when messages change
+    fetchMessages(selectedGroup._id);
+  }, [selectedGroup?._id]);
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
   }, [groupMessages]);
 
   const handleSendMessage = async (e) => {
@@ -34,8 +42,15 @@ const GroupChatContainer = () => {
     const trimmed = input.trim();
     if (!trimmed || !selectedGroup?._id) return;
 
-    await sendMessage(selectedGroup._id, trimmed);
-    setInput("");
+    setLoading(true);
+    try {
+      await sendMessage(selectedGroup._id, trimmed);
+      setInput("");
+    } catch (err) {
+      console.error("Error sending message", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!selectedGroup) {
@@ -62,9 +77,13 @@ const GroupChatContainer = () => {
           <p className="text-sm text-zinc-500 italic">No messages yet...</p>
         ) : (
           groupMessages.map((msg) => {
-            const isOwn = msg?.sender?._id === authUser?._id;
-            const messageKey = msg._id || `${msg.text}-${msg.createdAt}`;
-            const senderName = isOwn ? "You" : msg?.sender?.name || "Anonymous";
+            const senderId = msg?.sender?._id;
+            const isOwn =
+              senderId && authUser?._id && senderId === authUser._id;
+            const messageKey = msg?._id || `${msg?.text}-${msg?.createdAt}`;
+            const senderName = isOwn
+              ? "You"
+              : msg?.sender?.fullName || msg?.sender?.email || "Anonymous";
 
             return (
               <div
@@ -74,8 +93,12 @@ const GroupChatContainer = () => {
                 <div className="chat-image avatar">
                   <div className="size-10 rounded-full border">
                     <img
-                      src={msg?.sender?.avatar || "/avatar.png"}
-                      alt={senderName}
+                      src={
+                        isOwn
+                          ? authUser.profilePic || "/avatar.png"
+                          : msg?.sender?.profilePic || "/avatar.png"
+                      }
+                      alt="profile pic"
                     />
                   </div>
                 </div>
@@ -111,8 +134,8 @@ const GroupChatContainer = () => {
           value={input}
           onChange={(e) => setInput(e.target.value)}
         />
-        <button type="submit" className="btn btn-primary">
-          Send
+        <button type="submit" className="btn btn-primary" disabled={loading}>
+          {loading ? "Sending..." : "Send"}
         </button>
       </form>
     </div>
