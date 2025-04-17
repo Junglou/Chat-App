@@ -1,6 +1,12 @@
 import { create } from "zustand";
 import { axiosInstance } from "../lib/axios";
 import { useAuthStore } from "./useAuthStore";
+import { io } from "socket.io-client";
+
+// Connect to Socket.IO server (ensure the server URL is correct)
+export const socket = io("http://localhost:8080", {
+  query: { userId: useAuthStore.getState().userId }, // Pass userId for connection
+});
 
 export const useGroupMessageStore = create((set, get) => ({
   messages: {}, // { [groupId]: [msg1, msg2, ...] }
@@ -60,15 +66,22 @@ export const useGroupMessageStore = create((set, get) => ({
 
   // Gửi tin nhắn nhóm
   sendMessage: async (groupId, content) => {
+    const trimmedContent = content.trim();
+    if (!trimmedContent) return; // Nếu nội dung trống, không gửi
+
+    // Đặt trạng thái loading cho group
+    get().setGroupLoading(groupId, true);
+
     try {
+      // Gửi tin nhắn tới server
       const res = await axiosInstance.post(
         `/group-messages/${groupId}/messages`,
-        { text: content }
+        { text: trimmedContent }
       );
 
       const newMsg = res.data.message;
 
-      // Cập nhật vào store
+      // Cập nhật vào store ngay lập tức
       set((state) => ({
         messages: {
           ...state.messages,
@@ -76,20 +89,52 @@ export const useGroupMessageStore = create((set, get) => ({
         },
       }));
 
+      // Emit tin nhắn tới server để broadcast tới các người dùng khác
+      socket.emit("sendGroupMessage", { groupId, message: newMsg });
+
       console.log("📨 Gửi group message thành công:", newMsg);
     } catch (err) {
       console.error("❌ Failed to send group message:", err);
       get().setGroupError(groupId, "Không thể gửi tin nhắn.");
+    } finally {
+      // Sau khi gửi xong, tắt trạng thái loading
+      get().setGroupLoading(groupId, false);
     }
   },
 
   // Thêm tin nhắn vào store theo groupId
   addMessage: (groupId, message) => {
-    set((state) => ({
-      messages: {
-        ...state.messages,
-        [groupId]: [...(state.messages[groupId] || []), message],
-      },
-    }));
+    set((state) => {
+      const existingMessages = state.messages[groupId] || [];
+      // Kiểm tra nếu tin nhắn đã tồn tại trong nhóm
+      if (!existingMessages.some((msg) => msg._id === message._id)) {
+        return {
+          messages: {
+            ...state.messages,
+            [groupId]: [...existingMessages, message],
+          },
+        };
+      }
+      return state;
+    });
+  },
+
+  // Nhận tin nhắn từ server qua Socket.IO
+  listenForNewMessages: () => {
+    socket.on("receiveGroupMessage", (data) => {
+      const { groupId, message } = data;
+      console.log("📩 Nhận được tin nhắn mới:", message);
+
+      // Add the new message to the store for the correct group
+      get().addMessage(groupId, message);
+    });
+  },
+
+  // Kết nối và bắt đầu lắng nghe tin nhắn mới khi store được tạo
+  initializeSocket: () => {
+    get().listenForNewMessages();
   },
 }));
+
+// Initializing Socket connection when store is created
+useGroupMessageStore.getState().initializeSocket();

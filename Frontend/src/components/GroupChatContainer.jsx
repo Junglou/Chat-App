@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useGroupStore } from "../store/useGroupStore";
 import { useGroupMessageStore } from "../store/useGroupMessageStore";
 import { useAuthStore } from "../store/useAuthStore";
+import { socket } from "../store/useGroupMessageStore"; // Đảm bảo socket được export từ store
 
 const formatMessageTime = (dateStr) => {
   if (!dateStr) return "--:--";
@@ -24,7 +25,19 @@ const GroupChatContainer = () => {
 
   const groupMessages = messages?.[selectedGroup?._id] || [];
 
-  // Fetch messages
+  useEffect(() => {
+    if (selectedGroup?._id) {
+      socket.emit("joinGroup", selectedGroup._id);
+    }
+    return () => {
+      // Cleanup socket khi component bị hủy
+      if (selectedGroup?._id) {
+        socket.emit("leaveGroup", selectedGroup._id);
+      }
+    };
+  }, [selectedGroup?._id]);
+
+  // Fetch tin nhắn
   useEffect(() => {
     if (!selectedGroup?._id) return;
 
@@ -40,54 +53,60 @@ const GroupChatContainer = () => {
   const handleSendMessage = async (e) => {
     e.preventDefault();
     const trimmed = input.trim();
-    if (!trimmed || !selectedGroup?._id) return;
+    if (!trimmed || !selectedGroup?._id || loading) {
+      console.log("Không gửi được, điều kiện chưa đủ: ", { trimmed, loading });
+      return; // Thêm điều kiện kiểm tra loading
+    }
 
     setLoading(true);
+    console.log("Đang gửi tin nhắn...");
     try {
-      await sendMessage(selectedGroup._id, trimmed);
-      setInput("");
+      await sendMessage(selectedGroup._id, trimmed); // Gửi tin nhắn
+      console.log("Tin nhắn đã được gửi.");
+      setInput(""); // Xóa input sau khi gửi
     } catch (err) {
-      console.error("Error sending message", err);
+      console.error("Lỗi khi gửi tin nhắn", err);
     } finally {
-      setLoading(false);
+      console.log("Đã hoàn tất quá trình gửi tin nhắn.");
+      setLoading(false); // Sau khi hoàn tất, tắt loading
     }
   };
 
   if (!selectedGroup) {
     return (
       <div className="flex-1 flex items-center justify-center text-zinc-400">
-        Select a group to start chatting
+        Chọn nhóm để bắt đầu trò chuyện
       </div>
     );
   }
 
   return (
     <div className="flex-1 flex flex-col overflow-auto p-4">
-      {/* Group Header */}
+      {/* Tiêu đề nhóm */}
       <div className="border-b pb-2 mb-4">
         <h2 className="text-xl font-bold">{selectedGroup.name}</h2>
         <p className="text-sm text-zinc-500">
-          Members: {selectedGroup.members?.length || 0}
+          Thành viên: {selectedGroup.members?.length || 0}
         </p>
       </div>
 
-      {/* Messages */}
+      {/* Tin nhắn */}
       <div className="flex-1 overflow-y-auto space-y-4 mb-4">
         {groupMessages.length === 0 ? (
-          <p className="text-sm text-zinc-500 italic">No messages yet...</p>
+          <p className="text-sm text-zinc-500 italic">Chưa có tin nhắn...</p>
         ) : (
-          groupMessages.map((msg) => {
+          groupMessages.map((msg, index) => {
             const senderId = msg?.sender?._id;
             const isOwn =
               senderId && authUser?._id && senderId === authUser._id;
-            const messageKey = msg?._id || `${msg?.text}-${msg?.createdAt}`;
+            const messageKey = `${msg?._id}-${msg?.createdAt}-${index}`; // Sử dụng _id và createdAt kết hợp với index để tạo key duy nhất
             const senderName = isOwn
-              ? "You"
-              : msg?.sender?.fullName || msg?.sender?.email || "Anonymous";
+              ? "Bạn"
+              : msg?.sender?.fullName || msg?.sender?.email || "Vô danh";
 
             return (
               <div
-                key={messageKey}
+                key={messageKey} // Sử dụng key duy nhất
                 className={`chat ${isOwn ? "chat-end" : "chat-start"}`}
               >
                 <div className="chat-image avatar">
@@ -130,12 +149,12 @@ const GroupChatContainer = () => {
         <input
           type="text"
           className="input input-bordered flex-1"
-          placeholder="Type a message..."
+          placeholder="Gõ tin nhắn..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
         />
         <button type="submit" className="btn btn-primary" disabled={loading}>
-          {loading ? "Sending..." : "Send"}
+          {loading ? "Đang gửi..." : "Gửi"}
         </button>
       </form>
     </div>
