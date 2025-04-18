@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useGroupStore } from "../store/useGroupStore";
 import { useGroupMessageStore } from "../store/useGroupMessageStore";
 import { useAuthStore } from "../store/useAuthStore";
-import { socket } from "../store/useGroupMessageStore"; // Đảm bảo socket được export từ store
+import { socket } from "../store/useGroupMessageStore"; // Ensure socket is exported from store
 
 const formatMessageTime = (dateStr) => {
   if (!dateStr) return "--:--";
@@ -30,14 +30,14 @@ const GroupChatContainer = () => {
       socket.emit("joinGroup", selectedGroup._id);
     }
     return () => {
-      // Cleanup socket khi component bị hủy
+      // Cleanup socket when component is unmounted
       if (selectedGroup?._id) {
         socket.emit("leaveGroup", selectedGroup._id);
       }
     };
   }, [selectedGroup?._id]);
 
-  // Fetch tin nhắn
+  // Fetch messages
   useEffect(() => {
     if (!selectedGroup?._id) return;
 
@@ -54,59 +54,62 @@ const GroupChatContainer = () => {
     e.preventDefault();
     const trimmed = input.trim();
     if (!trimmed || !selectedGroup?._id || loading) {
-      console.log("Không gửi được, điều kiện chưa đủ: ", { trimmed, loading });
-      return; // Thêm điều kiện kiểm tra loading
+      console.log("Unable to send message, conditions not met: ", {
+        trimmed,
+        loading,
+      });
+      return; // Added check for loading
     }
 
     setLoading(true);
-    console.log("Đang gửi tin nhắn...");
+    console.log("Sending message...");
     try {
-      await sendMessage(selectedGroup._id, trimmed); // Gửi tin nhắn
-      console.log("Tin nhắn đã được gửi.");
-      setInput(""); // Xóa input sau khi gửi
+      await sendMessage(selectedGroup._id, trimmed); // Send message
+      console.log("Message sent.");
+      setInput(""); // Clear input after sending
     } catch (err) {
-      console.error("Lỗi khi gửi tin nhắn", err);
+      console.error("Error sending message", err);
     } finally {
-      console.log("Đã hoàn tất quá trình gửi tin nhắn.");
-      setLoading(false); // Sau khi hoàn tất, tắt loading
+      console.log("Message sending process completed.");
+      setLoading(false); // Turn off loading after process completion
     }
   };
 
   if (!selectedGroup) {
     return (
       <div className="flex-1 flex items-center justify-center text-zinc-400">
-        Chọn nhóm để bắt đầu trò chuyện
+        Select a group to start chatting
       </div>
     );
   }
 
   return (
     <div className="flex-1 flex flex-col overflow-auto p-4">
-      {/* Tiêu đề nhóm */}
+      {/* Group Title */}
       <div className="border-b pb-2 mb-4">
         <h2 className="text-xl font-bold">{selectedGroup.name}</h2>
         <p className="text-sm text-zinc-500">
-          Thành viên: {selectedGroup.members?.length || 0}
+          Members: {selectedGroup.members?.length || 0}
         </p>
       </div>
 
-      {/* Tin nhắn */}
+      {/* Messages */}
       <div className="flex-1 overflow-y-auto space-y-4 mb-4">
         {groupMessages.length === 0 ? (
-          <p className="text-sm text-zinc-500 italic">Chưa có tin nhắn...</p>
+          <p className="text-sm text-zinc-500 italic">No messages yet...</p>
         ) : (
           groupMessages.map((msg, index) => {
             const senderId = msg?.sender?._id;
             const isOwn =
               senderId && authUser?._id && senderId === authUser._id;
-            const messageKey = `${msg?._id}-${msg?.createdAt}-${index}`; // Sử dụng _id và createdAt kết hợp với index để tạo key duy nhất
+            const messageKey = `${msg?._id}-${msg?.createdAt}-${index}`; // Using _id and createdAt with index for unique key
             const senderName = isOwn
-              ? "Bạn"
-              : msg?.sender?.fullName || msg?.sender?.email || "Vô danh";
+              ? "You"
+              : msg?.sender?.fullName || msg?.sender?.email || "Anonymous";
 
             return (
               <div
-                key={messageKey} // Sử dụng key duy nhất
+                key={messageKey} // Use unique key
                 className={`chat ${isOwn ? "chat-end" : "chat-start"}`}
               >
                 <div className="chat-image avatar">
@@ -149,12 +152,12 @@ const GroupChatContainer = () => {
         <input
           type="text"
           className="input input-bordered flex-1"
-          placeholder="Gõ tin nhắn..."
+          placeholder="Type a message..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
         />
         <button type="submit" className="btn btn-primary" disabled={loading}>
-          {loading ? "Đang gửi..." : "Gửi"}
+          {loading ? "Sending..." : "Send"}
         </button>
       </form>
     </div>

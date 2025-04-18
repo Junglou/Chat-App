@@ -26,7 +26,7 @@ export const useChatStore = create((set, get) => ({
     } catch (error) {
       console.error(error);
       const message =
-        error?.response?.data?.message || "Lỗi khi tải danh sách người dùng";
+        error?.response?.data?.message || "Error loading user list.";
       toast.error(message);
       set({ users: [] }); // fallback để đảm bảo users luôn là array
     } finally {
@@ -55,11 +55,12 @@ export const useChatStore = create((set, get) => ({
         messageData
       );
       // Sau khi gửi tin nhắn thành công, gọi lại API để lấy tin nhắn mới nhất
-      await get().getMessages(selectedUser._id); // Gọi lại getMessages() để lấy danh sách tin nhắn mới nhất
+      await get().getMessages(selectedUser._id);
     } catch (error) {
       console.error("Error while sending message:", error);
       const errorMessage =
-        error?.response?.data?.message || "Có lỗi xảy ra khi gửi tin nhắn.";
+        error?.response?.data?.message ||
+        "An error occurred while sending the message.";
       toast.error(errorMessage);
     }
   },

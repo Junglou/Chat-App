@@ -13,7 +13,7 @@ export const useGroupMessageStore = create((set, get) => ({
   isGroupLoading: {}, // { [groupId]: true/false }
   groupErrors: {}, // { [groupId]: "error message" }
 
-  // Set trạng thái loading theo group
+  // Set loading state by group
   setGroupLoading: (groupId, isLoading) => {
     set((state) => ({
       isGroupLoading: {
@@ -23,7 +23,7 @@ export const useGroupMessageStore = create((set, get) => ({
     }));
   },
 
-  // Set lỗi nếu có
+  // Set error if any
   setGroupError: (groupId, error) => {
     set((state) => ({
       groupErrors: {
@@ -33,11 +33,11 @@ export const useGroupMessageStore = create((set, get) => ({
     }));
   },
 
-  // Fetch tin nhắn nhóm
+  // Fetch group messages
   fetchMessages: async (groupId) => {
     const { messages } = get();
 
-    if (messages[groupId]) return; // Đã có thì không gọi lại
+    if (messages[groupId]) return; // Already fetched, no need to call again
 
     get().setGroupLoading(groupId, true);
     get().setGroupError(groupId, null);
@@ -58,22 +58,22 @@ export const useGroupMessageStore = create((set, get) => ({
       }));
     } catch (err) {
       console.error("❌ Failed to fetch group messages:", err);
-      get().setGroupError(groupId, "Lỗi khi tải tin nhắn nhóm.");
+      get().setGroupError(groupId, "Error loading group messages.");
     } finally {
       get().setGroupLoading(groupId, false);
     }
   },
 
-  // Gửi tin nhắn nhóm
+  // Send group message
   sendMessage: async (groupId, content) => {
     const trimmedContent = content.trim();
-    if (!trimmedContent) return; // Nếu nội dung trống, không gửi
+    if (!trimmedContent) return; // If content is empty, don't send
 
-    // Đặt trạng thái loading cho group
+    // Set loading state for the group
     get().setGroupLoading(groupId, true);
 
     try {
-      // Gửi tin nhắn tới server
+      // Send message to the server
       const res = await axiosInstance.post(
         `/group-messages/${groupId}/messages`,
         { text: trimmedContent }
@@ -81,7 +81,7 @@ export const useGroupMessageStore = create((set, get) => ({
 
       const newMsg = res.data.message;
 
-      // Cập nhật vào store ngay lập tức
+      // Update store immediately
       set((state) => ({
         messages: {
           ...state.messages,
@@ -89,24 +89,24 @@ export const useGroupMessageStore = create((set, get) => ({
         },
       }));
 
-      // Emit tin nhắn tới server để broadcast tới các người dùng khác
+      // Emit message to the server to broadcast to other users
       socket.emit("sendGroupMessage", { groupId, message: newMsg });
 
-      console.log("📨 Gửi group message thành công:", newMsg);
+      console.log("📨 Successfully sent group message:", newMsg);
     } catch (err) {
       console.error("❌ Failed to send group message:", err);
-      get().setGroupError(groupId, "Không thể gửi tin nhắn.");
+      get().setGroupError(groupId, "Unable to send message.");
     } finally {
-      // Sau khi gửi xong, tắt trạng thái loading
+      // After sending, disable loading state
       get().setGroupLoading(groupId, false);
     }
   },
 
-  // Thêm tin nhắn vào store theo groupId
+  // Add message to store by groupId
   addMessage: (groupId, message) => {
     set((state) => {
       const existingMessages = state.messages[groupId] || [];
-      // Kiểm tra nếu tin nhắn đã tồn tại trong nhóm
+      // Check if the message already exists in the group
       if (!existingMessages.some((msg) => msg._id === message._id)) {
         return {
           messages: {
@@ -119,18 +119,18 @@ export const useGroupMessageStore = create((set, get) => ({
     });
   },
 
-  // Nhận tin nhắn từ server qua Socket.IO
+  // Receive message from server via Socket.IO
   listenForNewMessages: () => {
     socket.on("receiveGroupMessage", (data) => {
       const { groupId, message } = data;
-      console.log("📩 Nhận được tin nhắn mới:", message);
+      console.log("📩 Received new message:", message);
 
       // Add the new message to the store for the correct group
       get().addMessage(groupId, message);
     });
   },
 
-  // Kết nối và bắt đầu lắng nghe tin nhắn mới khi store được tạo
+  // Connect and start listening for new messages when the store is created
   initializeSocket: () => {
     get().listenForNewMessages();
   },

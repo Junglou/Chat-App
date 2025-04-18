@@ -51,7 +51,7 @@ export const useAuthStore = create((set, get) => ({
 
       get().connectSocket();
     } catch (error) {
-      console.error("Login error:", error); // Debug thêm
+      console.error("Login error:", error); 
       toast.error(
         error?.response?.data?.message || "Login failed. Please try again."
       );

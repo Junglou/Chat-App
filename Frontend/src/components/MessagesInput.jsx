@@ -10,7 +10,9 @@ const MessageInput = () => {
   const { sendMessage } = useChatStore();
 
   const handleImageChange = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0]; // ✅ Kiểm tra có file hay không
+    if (!file) return;
+
     if (!file.type.startsWith("image/")) {
       toast.error("Please select an image file");
       return;
@@ -38,7 +40,7 @@ const MessageInput = () => {
         image: imagePreview,
       });
 
-      // Clear form
+      // Xóa nội dung sau khi gửi
       setText("");
       setImagePreview(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -106,4 +108,5 @@ const MessageInput = () => {
     </div>
   );
 };
+
 export default MessageInput;

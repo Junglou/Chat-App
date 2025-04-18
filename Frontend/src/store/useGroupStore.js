@@ -1,6 +1,7 @@
 // src/store/useGroupStore.js
 import { create } from "zustand";
 import { axiosInstance } from "../lib/axios";
+import { toast } from "react-hot-toast";
 
 export const useGroupStore = create((set, get) => ({
   groups: [],
@@ -20,10 +21,25 @@ export const useGroupStore = create((set, get) => ({
       groups: [...state.groups, newGroup],
     })),
 
-  removeGroup: (groupId) =>
-    set((state) => ({
-      groups: state.groups.filter((group) => group._id !== groupId),
-    })),
+  removeGroup: async (groupId) => {
+    try {
+      await axiosInstance.delete(`/groups/${groupId}`);
+      set((state) => ({
+        groups: state.groups.filter((group) => group._id !== groupId),
+      }));
+      toast.success("✅ Group has been successfully deleted!");
+    } catch (err) {
+      console.error("❌ Error deleting group:", err);
+
+      if (err.response && err.response.status === 403) {
+        toast.error("❌ You do not have permission to delete this group.");
+      } else {
+        toast.error(
+          "❌ An error occurred while deleting the group. Please try again later."
+        );
+      }
+    }
+  },
 
   updateGroup: (updatedGroup) =>
     set((state) => ({
